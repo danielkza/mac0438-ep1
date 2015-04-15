@@ -5,6 +5,10 @@
 #include <pthread.h>
 #include "ciclista.h"
 
+/* Variáveis globais */
+bool debug;
+pthread_barrier_t interaction;
+
 int main(int argc, char **argv)
 {
     /* Contadores */
@@ -13,9 +17,12 @@ int main(int argc, char **argv)
     int resp = 0;
     /* Variáveis de leitura de argumentos */
     int dist = -1, num_cyclers = -1;
-    int use_random_velocity_i = -1;
+    bool use_random_velocity_i = false;
     /* Threads */
     pthread_t *ciclistas = NULL;
+
+    /* Inicialização de variáveis */
+    debug = false;
 
     /* Leitura de argumentos*/
     if(argc >= 4) {
@@ -26,6 +33,13 @@ int main(int argc, char **argv)
             use_random_velocity_i = true;
         else if(strcasecmp(argv[3], "u") == 0)
             use_random_velocity_i = false;
+
+        /* Opção de debug */
+        if(argc > 4)
+        {
+          if(strcasecmp(argv[4], "-d") == 0)
+            debug = true;
+        }
     }
 
     /* Verificação */
@@ -33,6 +47,8 @@ int main(int argc, char **argv)
         fprintf(stderr, "Uso: %s distância n_ciclistas [v|u]\n", argv[0]);
         return 1;
     }
+
+    pthread_barrier_init(&interaction, NULL, num_cyclers);
 
     /* Criando vetor de threads */
     ciclistas = malloc(sizeof(pthread_t) * num_cyclers);
@@ -49,6 +65,7 @@ int main(int argc, char **argv)
 
 
     /* Limpeza */
+    pthread_barrier_destroy(&interaction);
     pthread_exit(NULL);
     free(ciclistas);
 
