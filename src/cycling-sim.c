@@ -12,14 +12,14 @@ pthread_barrier_t interaction;
 int main(int argc, char **argv)
 {
     /* Contadores */
-    int i = 0;
-    long j = 0;
+    int i = 0, j = 0;
+    long thread_id = 0;
     int resp = 0;
     /* Variáveis de leitura de argumentos */
     int dist = -1, num_cyclers = -1;
     bool use_random_velocity_i = false;
     /* Threads */
-    pthread_t *ciclistas = NULL;
+    pthread_t *cyclers = NULL;
 
     /* Inicialização de variáveis */
     debug = false;
@@ -48,14 +48,24 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    /* Inicialização de variáveis globais */
     pthread_barrier_init(&interaction, NULL, num_cyclers);
+    sem_init(&status_sem, 0, 1);
+    sem_init(&track_sem, 0, 1);
+    track = malloc(sizeof(int*) * dist);
+    for(i = 0; i < dist; i++)
+    {
+      track[i] = malloc(sizeof(int) * 4);
+      for(j = 0; j < 4; j++)
+        track[i][j] = -1;
+    }
 
     /* Criando vetor de threads */
-    ciclistas = malloc(sizeof(pthread_t) * num_cyclers);
-    for(j = 0; j < num_cyclers; j++)
+    cyclers = malloc(sizeof(pthread_t) * num_cyclers);
+    cycler_ready = malloc(sizeof(bool) * num_cyclers);
+    for(thread_id = 1; thread_id < num_cyclers; thread_id++)
     {
-      printf("In main: creating thread %d\n", j);
-      resp = pthread_create(&ciclistas[j], NULL, ciclista, (void *)j);
+      resp = pthread_create(&cyclers[i], NULL, cycler, (void*) thread_id);
       if(resp)
       {
         printf("ERROR; return code from pthread_create() is %d\n", resp);
@@ -65,9 +75,15 @@ int main(int argc, char **argv)
 
 
     /* Limpeza */
+    sem_destroy(&status_sem);
+    sem_destroy(&track_sem);
     pthread_barrier_destroy(&interaction);
     pthread_exit(NULL);
-    free(ciclistas);
+    for(i = 0; i < dist; i++)
+      free(track[i]);
+    free(track);
+    free(cyclers);
+    free(cycler_ready);
 
     return 0;
 }
