@@ -1,13 +1,14 @@
 #ifndef CICLISTA_H
 #define CICLISTA_H
 
-#include <semaphore.h>
+/* Estrutura de informação */
+typedef struct
+{
+  int id;
+  int pos; /* Posição */
+} cycler_info;
 
-extern int **track;
-extern bool *cycler_ready;
-extern sem_t status_sem;
-extern sem_t track_sem;
-
+/* Funções */
 void *cycler(void *);
 
 #endif
