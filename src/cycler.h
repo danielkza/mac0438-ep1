@@ -5,7 +5,8 @@
 typedef struct
 {
   int id;
-  int pos; /* Posição */
+  int pos;
+  int lap;
 } cycler_info;
 
 /* Funções */
