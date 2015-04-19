@@ -3,43 +3,37 @@
 #include "track.h"
 #include "cycler.h"
 
-int* track_new(int num_cyclers, int length, cycler_info **cycler_infos)
+track_t* track_new(int num_cyclers, int length, cycler_info **cycler_infos_ret)
 {
-  int *track = malloc(track_length * num_cyclers, sizeof(int));
-  cycler_info *cycler_infos = malloc(num_cyclers, sizeof(cycler_info));
+    track_t *track = malloc(sizeof(*track));
+    track->length = length;
+    track->laps = 0;
+    track->positions = calloc(length, sizeof(*track->positions));
+    
+    cycler_info *cycler_infos = malloc(num_cyclers * sizeof(cycler_info));
 
-  for(int i = 0; i < num_cyclers; i++) {
-    cycler_infos[i].id = i;
-    cycler_infos[i].pos = rand() % track_length;
-    cycler_infos[i].lap = 0;
-  }
-
-  for(int i = 0; i < track_length; i++) {
-
-  }
-
-    for(int j = 0, k = 0; j < num_cyclers; j++)
-    {
-      if(track[j][0] == -1)
-      {
-        if(k == pos)
-        {
-          track[j][0] = i;
-          rev_vec[i] = j;
-          break;
-        }
-        else
-          k++;
-      }
+    for(int i = 0; i < num_cyclers; i++) {
+        cycler_infos[i].id = i;
+        cycler_infos[i].lap = 0;
+        track->positions[i].cyclists[0] = i;
     }
-  }
+    
+    for(int i = num_cyclers - 1; i > 0; i--) {
+        int tmp = track->positions[i].cyclists[0], j = rand() % (num_cyclers - 1);
+        track->positions[i].cyclists[0] = track->positions[j].cyclists[0];
+        track->positions[j].cyclists[0] = tmp;
+    }
 
-  if(debug)
-  {
     for(int i = 0; i < num_cyclers; i++)
-      printf("%d ", track[i][0]);
-    printf("\n");
-  }
+        cycler_infos[track->positions[i].cyclists[0]].pos = i;
 
-  return rev_vec;
+    *cycler_infos_ret = cycler_infos;
+    return track;
+}
+
+void track_free(track_t *track, cycler_info *cycler_infos)
+{
+    free(cycler_infos);
+    free(track->positions);
+    free(track);
 }

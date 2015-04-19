@@ -7,23 +7,21 @@
 #include "globals.h"
 
 /* Variáveis globais */
-int **track;
-bool *cycler_ready;
 sem_t status_sem;
 sem_t track_sem;
 
 void *cycler(void *c_info)
 {
   int i = 0;
-  int vel = 0; /* Número de iterações para mudar de posição */
-  bool semi_meter = false; /* True caso o ciclista precise de mais uma iteracao para se mover */
+  //int vel = 0; /* Número de iterações para mudar de posição */
+  // bool semi_meter = false; /* True caso o ciclista precise de mais uma iteracao para se mover */
   cycler_info *info = (cycler_info*) c_info;
 
   while(i < 3)
   {
     /* Inicialização da iteração */
     sem_wait(&status_sem);
-    cycler_ready[info->id] = false;
+    //cycler_ready[info->id] = false;
     if(debug)
       printf("STATUS\n");
     sem_post(&status_sem);
@@ -32,13 +30,12 @@ void *cycler(void *c_info)
     pthread_barrier_wait(&interaction);
 
     if(debug)
-      printf("Hello %ld\n", info->id);
+      printf("Hello %d\n", info->id);
     pthread_barrier_wait(&interaction);
 
     i++;
   }
 
-  free(info);
   pthread_barrier_wait(&join);
   pthread_exit(NULL); 
 }
