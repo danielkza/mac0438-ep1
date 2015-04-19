@@ -18,6 +18,6 @@ typedef struct {
 } track_t;
 
 track_t* track_new(int num_cyclers, int length, cycler_info **cycler_infos_ret);
-void track_free(track_t *track, cycler_info *cycler_infos);
+void track_free(track_t *old_track, cycler_info *cycler_infos);
 
 #endif // TRACK_H

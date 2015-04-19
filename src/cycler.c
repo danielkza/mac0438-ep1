@@ -17,21 +17,20 @@ void *cycler(void *c_info)
   // bool semi_meter = false; /* True caso o ciclista precise de mais uma iteracao para se mover */
   cycler_info *info = (cycler_info*) c_info;
 
+  pthread_barrier_wait(&interaction);
   while(i < 3)
   {
     /* Inicialização da iteração */
     sem_wait(&status_sem);
     //cycler_ready[info->id] = false;
-    if(debug)
-      printf("STATUS\n");
-    sem_post(&status_sem);
-    if(debug)
-      printf("OOPS\n");
-    pthread_barrier_wait(&interaction);
+    track->positions[info->pos].cyclists[0] = -1;
+    info->pos = (info->pos + 1) % track->length;
+    track->positions[info->pos].cyclists[0] = info->id;
 
-    if(debug)
-      printf("Hello %d\n", info->id);
+    sem_post(&status_sem);
+
     pthread_barrier_wait(&interaction);
+    pthread_barrier_wait(&printing);
 
     i++;
   }
