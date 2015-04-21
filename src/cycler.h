@@ -4,9 +4,9 @@
 #include "pthread.h"
 
 typedef enum {
-    RUNNING = 0,
-    FINISHED = 1,
-    CRASHED = 2
+    CYCLER_RUNNING = 0,
+    CYCLER_FINISHED = 1,
+    CYCLER_CRASHED = 2
 } cycler_status;
 
 /* Estrutura de informação */
@@ -18,7 +18,7 @@ typedef struct {
   pthread_t thread;
 } cycler_info;
 
-/* Funções */
+void cycler_info_init(cycler_info *info, int id);
 void *cycler(void *);
 
 #endif

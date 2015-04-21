@@ -14,14 +14,6 @@ bool debug;
 bool use_random_velocity;
 pthread_barrier_t cycler_instant_barrier, join, printing;
 
-void print_cyclers(cycler_info *infos, int num_cyclers)
-{
-    for(int i = 0; i < num_cyclers; i++) {
-        printf("%d ", infos[i].pos);
-    }
-
-    printf("\n");
-}
 
 
 int main(int argc, char **argv)
@@ -61,42 +53,47 @@ int main(int argc, char **argv)
     sem_init(&status_sem, 0, 1);
     sem_init(&track_sem, 0, 1);
 
-    cycler_info *cycler_infos;
-    track = track_new(num_cyclers, dist, &cycler_infos);
-
-    print_cyclers(cycler_infos, num_cyclers);
+    g_track = track_new(num_cyclers, dist, use_random_velocity_i == 1);
+    track_print_cyclers(g_track);
 
     cycler_instant_start_counter = 0;
     
-    for(int i = 0; i < num_cyclers; i++) {
-        if(pthread_create(&(cycler_infos[i].thread), NULL, cycler, &cycler_infos[i]) != 0) {
+    for(int i = 0; i < g_track->num_cyclers; i++) {
+        cycler_info *info = &(g_track->cycler_infos[i]);
+        if(pthread_create(&info->thread, NULL, cycler, info) != 0) {
             perror("pthread_create: ");
             return 1;
         }
     }
 
+    int prev_lap = 0;
     while(1) {
+        int eliminated = track_update_cyclers(g_track);
+        
+        if(g_track->lap != prev_lap && g_track->lap % 2 == 0) {
+            int last = track_find_last(g_track);
+            cycler_info *last_info = &g_track->cycler_infos[last];
+            printf("Eliminou %d!!!\n", last_info->id);
+            last_info->status = CYCLER_FINISHED;
+        }
+
+        prev_lap = g_track->lap;
+
         /* Seta a condição de início da iteração e notifica todas as threads */
         PTHREAD_USING_MUTEX(&cycler_instant_mutex) {
-            cycler_instant_start_counter = 1;
+            /* Como alguns ciclitas acabaram de ser eliminados, ainda é preciso
+               incluí-los na variável de condição de contagem de entrada.
+               A própria thread verá que não deve mais rodar e irá parar
+               antes da iteração.
+             */
+            cycler_instant_start_counter = eliminated + g_track->num_cyclers;
             pthread_cond_broadcast(&cycler_instant_cond);
         }
 
-        /* Espera que todas as threads tenham iniciado */
-
+        /* Espera que todas as threads tenham terminado a iteração */
         pthread_barrier_wait(&cycler_instant_barrier);
 
-        PTHREAD_USING_MUTEX(&cycler_instant_mutex) {
-            cycler_instant_start_counter = 1;
-        }
-
-        pthread_mutex_lock(&cycler_instant_mutex);
-
-        pthread_mutex_lock(&cycler_instant_mutex);
-        cycler_instant_start_counter = 0;
-        pthread_mutex_unlock(&cycler_instant_mutex);
-
-        print_cyclers(cycler_infos, num_cyclers);
+        track_print_cyclers(g_track);
     }
 
     /* Sincroniza todos os processos antes de limpar as variáveis */
@@ -106,8 +103,8 @@ int main(int argc, char **argv)
     pthread_cond_destroy(&cycler_instant_cond);
     pthread_mutex_destroy(&cycler_instant_mutex);
 
-    track_free(track, cycler_infos);
-    track = NULL;
+    track_free(g_track);
+    g_track = NULL;
 
     pthread_exit(NULL);
     return 0;

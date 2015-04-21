@@ -17,6 +17,6 @@ extern int cycler_instant_start_counter;
 extern sem_t status_sem;
 extern sem_t track_sem;
 
-extern track_t *track;
+extern track_t *g_track;
 
 #endif
