@@ -3,21 +3,25 @@
 
 #include "cycler.h"
 
-#define MAX_CYCLISTS_PER_POS 4
+#define MAX_CYCLERS_PER_POS 4
 
 typedef struct {
     int occupied;
     int occupied_ready;
-    int cyclists[MAX_CYCLISTS_PER_POS];
+    int cyclers[MAX_cyclers_PER_POS];
 } track_pos_t;
 
 typedef struct {
     int length;
     int laps;
+    bool use_random_velocity;
+    int orig_num_cyclers;
+    int num_cyclers;
+    cycler_info *cycler_infos;
     track_pos_t *positions;
 } track_t;
 
-track_t* track_new(int num_cyclers, int length, cycler_info **cycler_infos_ret);
-void track_free(track_t *old_track, cycler_info *cycler_infos);
+track_t* track_new(int num_cyclers, int length, bool use_random_velocity);
+void track_free(track_t *old_track);
 
 #endif // TRACK_H
