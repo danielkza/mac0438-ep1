@@ -41,8 +41,10 @@ void *cycler(void *c_info)
             //printf("cycler_instant_start_counter: %d\n", cycler_instant_start_counter);
         }
 
-        if(info->status != CYCLER_RUNNING)
+        if(info->status != CYCLER_RUNNING) {
+            printf("SAINDO\n");
             break;
+        }
 
         /* Inicialização da iteração */
 

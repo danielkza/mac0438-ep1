@@ -20,6 +20,8 @@ int main(int argc, char **argv)
 {
     /* Variáveis de leitura de argumentos */
     int dist = -1, num_cyclers = -1, use_random_velocity_i = -1;
+    int prev_lap = 0;
+    int debug_count = 0;
 
     /* Inicialização de variáveis */
     debug = false;
@@ -54,7 +56,6 @@ int main(int argc, char **argv)
     sem_init(&track_sem, 0, 1);
 
     g_track = track_new(num_cyclers, dist, use_random_velocity_i == 1);
-    track_print_cyclers(g_track);
 
     cycler_instant_start_counter = 0;
     
@@ -66,23 +67,33 @@ int main(int argc, char **argv)
         }
     }
 
-    int prev_lap = 0;
+    /* Iterações */
     while(1) {
         int eliminated = track_update_cyclers(g_track);
-        if(g_track->num_cyclers == 0)
-            break;
         
+        /* Elimina o último colocado a cada duas voltas */
         if(g_track->lap != prev_lap && g_track->lap % 2 == 0) {
             int last = track_find_last(g_track);
             cycler_info *last_info = &g_track->cycler_infos[last];
-            //printf("Eliminou %d!!!\n", last_info->id);
+
             for(int i = 0; i < MAX_CYCLERS_PER_POS; i++) {
                 if(g_track->positions[last_info->pos].cyclers[i] == last_info->id)
                     g_track->positions[last_info->pos].cyclers[i] = -1;
             }
             g_track->positions[last_info->pos].occupied--;
             last_info->status = CYCLER_FINISHED;
+            /* Atualiza as informações da pista */
             eliminated = track_update_cyclers(g_track);
+
+            /* Verifica se o vencedor foi definido */
+            if(g_track->num_cyclers == 1)
+            {
+                int winner = track_find_last(g_track);
+                cycler_info *winner_info = &g_track->cycler_infos[winner];
+                winner_info->status = CYCLER_FINISHED;
+                /* Atualiza as informações da pista */
+                eliminated += track_update_cyclers(g_track);
+            }
         }
 
         prev_lap = g_track->lap;
@@ -93,16 +104,33 @@ int main(int argc, char **argv)
                incluí-los na variável de condição de contagem de entrada.
                A própria thread verá que não deve mais rodar e irá parar
                antes da iteração.
-             */
+               */
             cycler_instant_start_counter = eliminated + g_track->num_cyclers;
             pthread_cond_broadcast(&cycler_instant_cond);
         }
 
+        /* Sai do loop caso não haja mais ciclistas */
+        if(g_track->num_cyclers == 0)
+            break;
+
         /* Espera que todas as threads tenham terminado a iteração */
         pthread_barrier_wait(&cycler_instant_barrier);
 
-        //track_print_cyclers(g_track);
+        /* Imprime os três últimos a cada volta */
+        track_print_tree_last(track_t *track);
+
+        /* Print de debug */
+        if(debug)
+        {
+            if(debug_count == 0)
+                track_print_cyclers(g_track);
+            else
+                debug_count = (debug_count + 1) % 200;
+        }
     }
+
+    /* Imprime a colocação final */
+    track_print_final(g_track);
 
     /* Sincroniza todos os processos antes de limpar as variáveis */
     sem_destroy(&status_sem);

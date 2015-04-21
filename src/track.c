@@ -75,28 +75,39 @@ int track_update_cyclers(track_t *track)
 
 void track_print_cyclers(track_t *track)
 {
-    for(int pos = 0; pos < track->length; pos++) {
-        track_pos_t *track_pos = &track->positions[pos];
-        if(track_pos->occupied == 0)
-            continue;
-
-        printf("%d (%d):", pos, track_pos->occupied);
-
-        for(int i = 0; i < MAX_CYCLERS_PER_POS; i++) {
-            int id = track_pos->cyclers[i];
-            if(id == -1)
-            {
-                printf(" x ");continue;
-            }
-
-            cycler_info *info = &(track->cycler_infos[id]);
-            if(info->status == CYCLER_RUNNING)
-                printf(" %d ", info->id);
+    printf("ID\t|Volta\t|Posicao\t|Status\n");
+    for(int i = 0; i < track->orig_num_cyclers; i++)
+    {
+        printf("%d\t%d\t%d\t\t", i, track->cycler_infos[i].lap, track->cycler_infos[i].pos);
+        switch(track->cycler_infos[i].status)
+        {
+            case CYCLER_RUNNING:
+                printf("RUNNING\n");
+                break;
+            case CYCLER_FINISHED:
+                printf("FINISHED\n");
+                break;
+            case CYCLER_CRASHED:
+                printf("CRASHED\n");
+                break;
         }
-
-        printf("\n");
     }
-    printf("--------\n");
+
+    printf("\n");
+}
+
+void track_print_tree_last(track_t *track)
+{
+    track = NULL;
+
+    return;
+}
+
+void track_print_final(track_t *track)
+{
+    track = NULL;
+
+    return;
 }
 
 int track_find_last(track_t *track)
