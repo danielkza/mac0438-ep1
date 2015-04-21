@@ -69,12 +69,20 @@ int main(int argc, char **argv)
     int prev_lap = 0;
     while(1) {
         int eliminated = track_update_cyclers(g_track);
+        if(g_track->num_cyclers == 0)
+            break;
         
         if(g_track->lap != prev_lap && g_track->lap % 2 == 0) {
             int last = track_find_last(g_track);
             cycler_info *last_info = &g_track->cycler_infos[last];
-            printf("Eliminou %d!!!\n", last_info->id);
+            //printf("Eliminou %d!!!\n", last_info->id);
+            for(int i = 0; i < MAX_CYCLERS_PER_POS; i++) {
+                if(g_track->positions[last_info->pos].cyclers[i] == last_info->id)
+                    g_track->positions[last_info->pos].cyclers[i] = -1;
+            }
+            g_track->positions[last_info->pos].occupied--;
             last_info->status = CYCLER_FINISHED;
+            eliminated = track_update_cyclers(g_track);
         }
 
         prev_lap = g_track->lap;
@@ -93,7 +101,7 @@ int main(int argc, char **argv)
         /* Espera que todas as threads tenham terminado a iteração */
         pthread_barrier_wait(&cycler_instant_barrier);
 
-        track_print_cyclers(g_track);
+        //track_print_cyclers(g_track);
     }
 
     /* Sincroniza todos os processos antes de limpar as variáveis */

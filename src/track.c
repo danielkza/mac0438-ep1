@@ -62,7 +62,7 @@ int track_update_cyclers(track_t *track)
         pthread_barrier_destroy(&cycler_instant_barrier);
         pthread_barrier_init(&cycler_instant_barrier, NULL, num + 1);
 
-        eliminated = num - track->num_cyclers;
+        eliminated = track->num_cyclers - num;
         track->num_cyclers = num;
     }
 
@@ -85,7 +85,9 @@ void track_print_cyclers(track_t *track)
         for(int i = 0; i < MAX_CYCLERS_PER_POS; i++) {
             int id = track_pos->cyclers[i];
             if(id == -1)
-                continue;
+            {
+                printf(" x ");continue;
+            }
 
             cycler_info *info = &(track->cycler_infos[id]);
             if(info->status == CYCLER_RUNNING)
@@ -94,6 +96,7 @@ void track_print_cyclers(track_t *track)
 
         printf("\n");
     }
+    printf("--------\n");
 }
 
 int track_find_last(track_t *track)

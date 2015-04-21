@@ -38,7 +38,7 @@ void *cycler(void *c_info)
                 pthread_cond_wait(&cycler_instant_cond, &cycler_instant_mutex);
 
             cycler_instant_start_counter--;
-            // printf("cycler_instant_start_counter: %d\n", cycler_instant_start_counter);
+            //printf("cycler_instant_start_counter: %d\n", cycler_instant_start_counter);
         }
 
         if(info->status != CYCLER_RUNNING)
@@ -51,7 +51,7 @@ void *cycler(void *c_info)
         track_pos_t *old_track_pos = &g_track->positions[old_pos];
         track_pos_t *new_track_pos = &g_track->positions[new_pos];
 
-        // printf("%d: old_pos = %d, new_pos=%d\n", id, old_pos, new_pos);
+        //printf("%d: old_pos = %d, new_pos=%d\n", id, old_pos, new_pos);
 
         while(1) {
             // Posição já está cheia, e todos os ciclistas ali já fizeram seu movimento
@@ -75,7 +75,7 @@ void *cycler(void *c_info)
             for(slot_pos = 0; slot_pos < MAX_CYCLERS_PER_POS; slot_pos++) {
                 slot = &(new_track_pos->cyclers[slot_pos]);
                 if(__sync_bool_compare_and_swap(slot, -1, id)) {
-                    // printf("%d: Entrou no slot %d\n", id, slot_pos);
+                    //printf("%d: Entrou no slot %d\n", id, slot_pos);
                     break;
                 }
             }
@@ -109,11 +109,11 @@ void *cycler(void *c_info)
             if(info->pos == 0)
                 info->lap++;
         }
-
+        //printf("Antes da barreira\n");
         pthread_barrier_wait(&cycler_instant_barrier);
     }
 
-    printf("%d: Acabou!!\n", info->id);
+    //printf("%d: Acabou!!\n", info->id);
     return NULL; 
 }
 
