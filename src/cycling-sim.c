@@ -20,7 +20,6 @@ int main(int argc, char **argv)
 {
     /* Variáveis de leitura de argumentos */
     int dist = -1, num_cyclers = -1, use_random_velocity_i = -1;
-    int prev_lap = 0;
     int debug_count = 0;
 
     /* Inicialização de variáveis */
@@ -68,35 +67,22 @@ int main(int argc, char **argv)
     }
 
     /* Iterações */
+    int prev_lap = 0;
+
     while(1) {
-        int eliminated = track_update_cyclers(g_track);
-        
+        track_update_lap(g_track);
+      
         /* Elimina o último colocado a cada duas voltas */
         if(g_track->lap != prev_lap && g_track->lap % 2 == 0) {
-            int last = track_find_last(g_track);
-            cycler_info *last_info = &g_track->cycler_infos[last];
+            if(g_track->lap % 4 == 0) //&& drand48() <= 0.1)
+                g_track->will_crash++;
 
-            for(int i = 0; i < MAX_CYCLERS_PER_POS; i++) {
-                if(g_track->positions[last_info->pos].cyclers[i] == last_info->id)
-                    g_track->positions[last_info->pos].cyclers[i] = -1;
-            }
-            g_track->positions[last_info->pos].occupied--;
-            last_info->status = CYCLER_FINISHED;
-            /* Atualiza as informações da pista */
-            eliminated = track_update_cyclers(g_track);
-
-            /* Verifica se o vencedor foi definido */
-            if(g_track->num_cyclers == 1)
-            {
-                int winner = track_find_last(g_track);
-                cycler_info *winner_info = &g_track->cycler_infos[winner];
-                winner_info->status = CYCLER_FINISHED;
-                /* Atualiza as informações da pista */
-                eliminated += track_update_cyclers(g_track);
-            }
+            g_track->waiting_for_elimination++;
         }
 
         prev_lap = g_track->lap;
+
+        int eliminated = track_update_eliminations(g_track);
 
         /* Seta a condição de início da iteração e notifica todas as threads */
         PTHREAD_USING_MUTEX(&cycler_instant_mutex) {

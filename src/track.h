@@ -5,6 +5,7 @@
 #include "cycler.h"
 
 #define MAX_CYCLERS_PER_POS 4
+#define MIN_CYCLERS_FOR_CRASHES 3
 
 typedef struct {
     int occupied;
@@ -20,10 +21,14 @@ typedef struct {
     int num_cyclers;
     cycler_info *cycler_infos;
     track_pos_t *positions;
+    int waiting_for_elimination;
+    int will_crash;
 } track_t;
 
 track_t* track_new(int num_cyclers, int length, bool use_random_velocity);
-int track_update_cyclers(track_t *track);
+
+void track_update_lap(track_t *track);
+int track_update_eliminations(track_t *track);
 void track_print_cyclers(track_t *track);
 void track_print_tree_last(track_t *track);
 void track_print_final(track_t *track);
