@@ -117,7 +117,7 @@ int main(int argc, char **argv)
         pthread_barrier_wait(&cycler_instant_barrier);
 
         /* Imprime os três últimos a cada volta */
-        track_print_tree_last(track_t *track);
+        track_print_tree_last(g_track);
 
         /* Print de debug */
         if(debug)
