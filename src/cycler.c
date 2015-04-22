@@ -23,19 +23,19 @@ void cycler_info_init(cycler_info *info, int id)
     info->pos = 0;
     info->lap = 0;
     info->status = CYCLER_RUNNING;
+    info->full_velocity = 0;
+    info->semi_meter = 0;
 }
 
 void *cycler(void *c_info)
 {
     bool use_random_velocity = g_track->use_random_velocity;
-    bool semi_meter = false; /* True caso o ciclista precise de mais uma iteracao para se mover */
-    bool full_velocity = false; /* True se o ciclista estiver a 50km/h */
     cycler_info *info = (cycler_info*) c_info;
     int id = info->id;
 
-    if(!use_random_velocity)
-        full_velocity = true;
-
+    info->full_velocity = !use_random_velocity;
+    info->semi_meter = 0;
+    
     while(1) {
         PTHREAD_USING_MUTEX(&cycler_instant_mutex) {
             while(!cycler_instant_start_counter)
@@ -53,7 +53,7 @@ void *cycler(void *c_info)
         int old_pos = info->pos;
         int new_pos = old_pos;
 
-        if(full_velocity || semi_meter) 
+        if(info->full_velocity || info->semi_meter) 
             new_pos = (info->pos + 1) % g_track->length;
 
         track_pos_t *old_track_pos = &g_track->positions[old_pos];
@@ -104,16 +104,16 @@ void *cycler(void *c_info)
         };
 
         if(new_pos == old_pos) {
-            semi_meter = true;
+            info->semi_meter = true;
             __sync_fetch_and_add(&old_track_pos->occupied_ready, 1);
         } else {
-            if(!full_velocity)
-                semi_meter = false;
+            if(!info->full_velocity)
+                info->semi_meter = false;
             info->pos = new_pos;
             if(info->pos == 0) {
                 info->lap++;
                 if(use_random_velocity) 
-                    full_velocity = (rand() % 2 == 0);
+                    info->full_velocity = (rand() % 2 == 0);
             }
         }
 

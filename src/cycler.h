@@ -16,6 +16,8 @@ typedef struct {
   int lap;
   cycler_status status;
   pthread_t thread;
+  bool full_velocity;
+  bool semi_meter;
 } cycler_info;
 
 void cycler_info_init(cycler_info *info, int id);

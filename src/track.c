@@ -196,22 +196,25 @@ int track_update_eliminations(track_t *track)
 
 void track_print_cyclers(track_t *track)
 {
-    printf("ID\t|Volta\t|Posicao\t|Status\n");
-    for(int i = 0; i < track->orig_num_cyclers; i++)
-    {
-        printf("%d\t%d\t%d\t\t", i, track->cycler_infos[i].lap, track->cycler_infos[i].pos);
-        switch(track->cycler_infos[i].status)
-        {
+    printf("%-5s|%-10s|%-10s|%-15s|%-15s\n", "ID", "Volta", "Posicao", "Status", "Velocidade");
+    
+    for(int i = 0; i < track->orig_num_cyclers; i++) {
+        cycler_info *info = &(track->cycler_infos[i]);
+        const char *status_s = "UNKNOWN";
+        switch(info->status) {
             case CYCLER_RUNNING:
-                printf("RUNNING\n");
+                status_s = "RUNNING";
                 break;
             case CYCLER_FINISHED:
-                printf("FINISHED\n");
+                status_s = "FINISHED";
                 break;
             case CYCLER_CRASHED:
-                printf("CRASHED\n");
+                status_s = "CRASHED";
                 break;
         }
+
+        int vel = info->full_velocity ? 50 : 25;
+        printf("%-5d|%-10d|%-10d|%-15s|%-15d\n", info->id, info->lap, info->pos, status_s, vel);
     }
 
     printf("\n");
