@@ -99,16 +99,21 @@ int main(int argc, char **argv)
             pthread_cond_broadcast(&cycler_instant_cond);
         }
 
-        /* Sai do loop caso não haja mais ciclistas */
-        if(g_track->num_cyclers == 0)
-            break;
+        if(eliminated)
+            printf("eliminated: %d, num: %d\n", eliminated, g_track->num_cyclers);
 
         /* Espera que todas as threads tenham terminado a iteração */
+        printf("enter barrier main\n");
         pthread_barrier_wait(&cycler_instant_barrier);
 
+        /* Sai do loop caso não haja mais ciclistas */
+        if(g_track->num_cyclers == 0) {
+            printf("bailing main loop\n");
+            break;
+        }
+
         /* Print de debug */
-        if(debug)
-        {
+        if(debug) {
             if(debug_count == 0)
                 track_print_cyclers(g_track);
             else

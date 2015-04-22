@@ -41,21 +41,21 @@ void *cycler(void *c_info)
             while(!cycler_instant_start_counter)
                 pthread_cond_wait(&cycler_instant_cond, &cycler_instant_mutex);
 
-                cycler_instant_start_counter--;
-            }
+            cycler_instant_start_counter--;
+        }
 
-            if(info->status != CYCLER_RUNNING) {
-                if(info->status == CYCLER_CRASHED)
-                    printf("Ciclista %d quebrou no metro %d da volta %d\n", info->id, info->lap, info->pos);
-                break;
-            }
+        if(info->status != CYCLER_RUNNING) {
+            if(info->status == CYCLER_CRASHED)
+                printf("Ciclista %d quebrou no metro %d da volta %d\n", info->id, info->lap, info->pos);
+            break;
+        }
 
-            /* Inicialização da iteração */
-            int old_pos = info->pos;
-            int new_pos = old_pos;
+        /* Inicialização da iteração */
+        int old_pos = info->pos;
+        int new_pos = old_pos;
 
-            if(info->full_velocity || info->semi_meter) 
-                new_pos = (info->pos + 1) % g_track->length;
+        if(info->full_velocity || info->semi_meter) 
+            new_pos = (info->pos + 1) % g_track->length;
 
         track_pos_t *old_track_pos = &g_track->positions[old_pos];
         track_pos_t *new_track_pos = &g_track->positions[new_pos];
@@ -64,7 +64,7 @@ void *cycler(void *c_info)
             // Posição já está cheia, e todos os ciclistas ali já fizeram seu movimento
             if(new_track_pos->occupied_ready == MAX_CYCLERS_PER_POS) {
                 new_pos = old_pos;
-                break;
+                continue;
             }
 
             // Posição está cheia, mas alguem não fez o movimento, podemos
@@ -118,6 +118,7 @@ void *cycler(void *c_info)
             }
         }
 
+        printf("enter barrier\n");
         pthread_barrier_wait(&cycler_instant_barrier);
     }
 

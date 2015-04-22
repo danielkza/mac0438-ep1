@@ -73,6 +73,7 @@ static void track_eliminate_cycler(track_t *track, cycler_info *info,
     for(int i = 0; i < MAX_CYCLERS_PER_POS; i++) {
         if(track_pos->cyclers[i] == info->id) {
             track_pos->cyclers[i] = -1;
+            track_pos->occupied--;
             break;
         }
     }
@@ -91,8 +92,9 @@ static int track_cyclers_compare_by_pos(const void *a, const void *b)
 }
 
 cycler_info **track_get_cyclers_in_order(track_t *track, bool only_running)
-{
-    cycler_info **infos = malloc((only_running? track->num_cyclers : track->orig_num_cyclers) * sizeof(*infos));
+{   
+    int res_size = (only_running? track->num_cyclers : track->orig_num_cyclers);
+    cycler_info **infos = calloc(res_size, sizeof(*infos));
     int infos_last = 0;
 
     // Cria uma array com ponteiros para todas as estruturas cycler_info.
@@ -105,13 +107,14 @@ cycler_info **track_get_cyclers_in_order(track_t *track, bool only_running)
         infos[infos_last++] = info;
     }
 
-    qsort(infos, (only_running? track->num_cyclers : track->orig_num_cyclers), sizeof(*infos), &track_cyclers_compare_by_pos);
+    qsort(infos, res_size, sizeof(*infos), &track_cyclers_compare_by_pos);
     return infos;
 }
 
 static void track_update_barrier(track_t *track)
 {
     // Reseta barreira com o novo número de ciclistas para evitar deadlock
+    printf("reset barrier to %d\n", track->num_cyclers + 1);
     pthread_barrier_destroy(&cycler_instant_barrier);
     pthread_barrier_init(&cycler_instant_barrier, NULL, track->num_cyclers + 1);
 }
@@ -137,8 +140,8 @@ int track_update_eliminations(track_t *track)
             cycler_info *info = cyclers_in_order[i];
             if(info->pos == 0 && info->lap % 2 == 0) {
                 track_eliminate_cycler(track, info, CYCLER_FINISHED);
-                track->waiting_for_elimination--;
                 eliminated++;
+                track->waiting_for_elimination--;
                 // Impede que um ciclista eliminado seja considerado para crash
                 cyclers_in_order[i] = NULL;
             }
@@ -147,17 +150,13 @@ int track_update_eliminations(track_t *track)
 
     // Não podemos mais crashar ciclistas depois que um número mínimo sobrou
     if(track->num_cyclers <= MIN_CYCLERS_FOR_CRASHES) {
-        if(track->num_cyclers == 1)
-        {
-            for(int i = orig_num - 1; i >= 0; i--) {
-                cycler_info *info = cyclers_in_order[i];
-                if(info != NULL){
-                    track_eliminate_cycler(track, info, CYCLER_FINISHED);
-                    eliminated++;
-                    break;
-                }
-            }
+        // Só sobrou o vencedor
+        if(eliminated && track->num_cyclers == 1) {
+            cycler_info *info = cyclers_in_order[orig_num - 1];
+            track_eliminate_cycler(track, info, CYCLER_FINISHED);
+            eliminated++;
         }
+
         track->will_crash = 0;
     } else {
         // Repete as tentativas caso encontremos slots que correspondiam a
@@ -168,9 +167,8 @@ int track_update_eliminations(track_t *track)
                 continue;
 
             track_eliminate_cycler(track, info, CYCLER_CRASHED);
-
-            track->will_crash--;
             eliminated++;
+            track->will_crash--;
         }
     }
 

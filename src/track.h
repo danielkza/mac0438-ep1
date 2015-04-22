@@ -5,7 +5,7 @@
 #include "cycler.h"
 
 #define MAX_CYCLERS_PER_POS 4
-#define MIN_CYCLERS_FOR_CRASHES 3
+#define MIN_CYCLERS_FOR_CRASHES 4
 
 typedef struct {
     int occupied;
