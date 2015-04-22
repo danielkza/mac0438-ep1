@@ -27,10 +27,14 @@ void cycler_info_init(cycler_info *info, int id)
 
 void *cycler(void *c_info)
 {
-    //int vel = 0; /* Número de iterações para mudar de posição */
-    // bool semi_meter = false; /* True caso o ciclista precise de mais uma iteracao para se mover */
+    bool use_random_velocity = g_track->use_random_velocity;
+    bool semi_meter = false; /* True caso o ciclista precise de mais uma iteracao para se mover */
+    bool full_velocity = false; /* True se o ciclista estiver a 50km/h */
     cycler_info *info = (cycler_info*) c_info;
     int id = info->id;
+
+    if(!use_random_velocity)
+        full_velocity = true;
 
     while(1) {
         PTHREAD_USING_MUTEX(&cycler_instant_mutex) {
@@ -38,7 +42,6 @@ void *cycler(void *c_info)
                 pthread_cond_wait(&cycler_instant_cond, &cycler_instant_mutex);
 
             cycler_instant_start_counter--;
-            //printf("cycler_instant_start_counter: %d\n", cycler_instant_start_counter);
         }
 
         if(info->status != CYCLER_RUNNING) {
@@ -47,18 +50,18 @@ void *cycler(void *c_info)
         }
 
         /* Inicialização da iteração */
-
         int old_pos = info->pos;
-        int new_pos = (info->pos + 1) % g_track->length;
+        int new_pos = old_pos;
+
+        if(full_velocity || semi_meter) 
+            new_pos = (info->pos + 1) % g_track->length;
+
         track_pos_t *old_track_pos = &g_track->positions[old_pos];
         track_pos_t *new_track_pos = &g_track->positions[new_pos];
 
-        //printf("%d: old_pos = %d, new_pos=%d\n", id, old_pos, new_pos);
-
-        while(1) {
+        while(new_pos != old_pos) {
             // Posição já está cheia, e todos os ciclistas ali já fizeram seu movimento
             if(new_track_pos->occupied_ready == MAX_CYCLERS_PER_POS) {
-                // printf("%d: Próxima posição cheia, fudeu\n", id);
                 new_pos = old_pos;
                 break;
             }
@@ -66,7 +69,6 @@ void *cycler(void *c_info)
             // Posição está cheia, mas alguem não fez o movimento, podemos
             // tentar novamente
             if(new_track_pos->occupied == MAX_CYCLERS_PER_POS) {
-                // printf("%d: Próxima posição cheia, AINDA não fudeu\n", id);
                 // TODO: sleep
                 continue;
             }
@@ -77,14 +79,12 @@ void *cycler(void *c_info)
             for(slot_pos = 0; slot_pos < MAX_CYCLERS_PER_POS; slot_pos++) {
                 slot = &(new_track_pos->cyclers[slot_pos]);
                 if(__sync_bool_compare_and_swap(slot, -1, id)) {
-                    //printf("%d: Entrou no slot %d\n", id, slot_pos);
                     break;
                 }
             }
 
             // Não conseguimos nenhum slot, alguém chegou antes: vamos tentar novamente
             if(slot_pos == MAX_CYCLERS_PER_POS) {
-                // printf("%d: Não conseguiu entrar, tentando novamente\n", id);
                 continue;
             }
 
@@ -104,18 +104,22 @@ void *cycler(void *c_info)
         };
 
         if(new_pos == old_pos) {
-            // printf("%d: Ficou na mesma\n", id);
+            semi_meter = true;
             __sync_fetch_and_add(&old_track_pos->occupied_ready, 1);
         } else {
+            if(!full_velocity)
+                semi_meter = false;
             info->pos = new_pos;
-            if(info->pos == 0)
+            if(info->pos == 0) {
                 info->lap++;
+                if(use_random_velocity) 
+                    full_velocity = (rand() % 2 == 0);
+            }
         }
-        //printf("Antes da barreira\n");
+
         pthread_barrier_wait(&cycler_instant_barrier);
     }
 
-    //printf("%d: Acabou!!\n", info->id);
     return NULL; 
 }
 

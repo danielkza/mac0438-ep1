@@ -158,6 +158,17 @@ int track_update_eliminations(track_t *track)
 
     // Não podemos mais crashar ciclistas depois que um número mínimo sobrou
     if(track->num_cyclers <= MIN_CYCLERS_FOR_CRASHES) {
+        if(track->num_cyclers == 1)
+        {
+            for(int i = orig_num - 1; i >= 0; i--) {
+                cycler_info *info = cyclers_in_order[i];
+                if(info != NULL){
+                    track_eliminate_cycler(track, info, CYCLER_FINISHED);
+                    eliminated++;
+                    break;
+                }
+            }
+        }
         track->will_crash = 0;
     } else {
         // Repete as tentativas caso encontremos slots que correspondiam a
