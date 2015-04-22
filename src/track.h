@@ -32,7 +32,6 @@ int track_update_eliminations(track_t *track);
 void track_print_cyclers(track_t *track);
 void track_print_tree_last(track_t *track);
 void track_print_final(track_t *track);
-int track_find_last(track_t *track);
 void track_free(track_t *old_track);
 
 #endif // TRACK_H

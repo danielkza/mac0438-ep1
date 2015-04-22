@@ -57,7 +57,7 @@ int main(int argc, char **argv)
     g_track = track_new(num_cyclers, dist, use_random_velocity_i == 1);
 
     cycler_instant_start_counter = 0;
-    
+
     for(int i = 0; i < g_track->num_cyclers; i++) {
         cycler_info *info = &(g_track->cycler_infos[i]);
         if(pthread_create(&info->thread, NULL, cycler, info) != 0) {
@@ -71,10 +71,14 @@ int main(int argc, char **argv)
 
     while(1) {
         track_update_lap(g_track);
-      
+
+        /* Imprime os três últimos a cada volta */
+        if(prev_lap != g_track->lap)
+            track_print_tree_last(g_track);
+
         /* Elimina o último colocado a cada duas voltas */
         if(g_track->lap != prev_lap && g_track->lap % 2 == 0) {
-            if(g_track->lap % 4 == 0) //&& drand48() <= 0.1)
+            if(g_track->lap % 4 == 0 && drand48() <= 0.1)
                 g_track->will_crash++;
 
             g_track->waiting_for_elimination++;
@@ -101,9 +105,6 @@ int main(int argc, char **argv)
 
         /* Espera que todas as threads tenham terminado a iteração */
         pthread_barrier_wait(&cycler_instant_barrier);
-
-        /* Imprime os três últimos a cada volta */
-        track_print_tree_last(g_track);
 
         /* Print de debug */
         if(debug)

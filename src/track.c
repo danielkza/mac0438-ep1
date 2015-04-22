@@ -90,22 +90,22 @@ static int track_cyclers_compare_by_pos(const void *a, const void *b)
     return 0;
 }
 
-cycler_info **track_get_cyclers_in_order(track_t *track)
+cycler_info **track_get_cyclers_in_order(track_t *track, bool only_running)
 {
-    cycler_info **infos = malloc(track->num_cyclers * sizeof(*infos));
+    cycler_info **infos = malloc((only_running? track->num_cyclers : track->orig_num_cyclers) * sizeof(*infos));
     int infos_last = 0;
 
     // Cria uma array com ponteiros para todas as estruturas cycler_info.
     // Essa cópia será ordenada e retornada para o caller.
     for(int i = 0; i < track->orig_num_cyclers; i++) {
         cycler_info *info = &(track->cycler_infos[i]);
-        if(info->status != CYCLER_RUNNING)
+        if(only_running && info->status != CYCLER_RUNNING)
             continue;
 
         infos[infos_last++] = info;
     }
 
-    qsort(infos, track->num_cyclers, sizeof(*infos), &track_cyclers_compare_by_pos);
+    qsort(infos, (only_running? track->num_cyclers : track->orig_num_cyclers), sizeof(*infos), &track_cyclers_compare_by_pos);
     return infos;
 }
 
@@ -126,7 +126,7 @@ int track_update_eliminations(track_t *track)
     // a barreira
     int eliminated = 0;
     // Pega todos os ciclistas já ordenados do último para o primeiro
-    cycler_info **cyclers_in_order = track_get_cyclers_in_order(track);
+    cycler_info **cyclers_in_order = track_get_cyclers_in_order(track, true);
     // Guarda o tamanho original do cyclers_in_order pois ele vai diferir do
     // tamanho guardado na track após eliminações
     int orig_num = track->num_cyclers;
@@ -137,17 +137,6 @@ int track_update_eliminations(track_t *track)
             cycler_info *info = cyclers_in_order[i];
             if(info->pos == 0 && info->lap % 2 == 0) {
                 track_eliminate_cycler(track, info, CYCLER_FINISHED);
-                printf("Eliminou %d\n", info->id);
-
-                for(int j = 0; j < orig_num; j++) {
-                    cycler_info *info2 = cyclers_in_order[j];
-                    if(info2 != NULL)
-                        printf("%d ", info2->id);
-                    else
-                        printf("- ");
-                }
-                printf("\n");
-
                 track->waiting_for_elimination--;
                 eliminated++;
                 // Impede que um ciclista eliminado seja considerado para crash
@@ -179,7 +168,6 @@ int track_update_eliminations(track_t *track)
                 continue;
 
             track_eliminate_cycler(track, info, CYCLER_CRASHED);
-            printf("Crashou %d\n", info->id);
 
             track->will_crash--;
             eliminated++;
@@ -222,43 +210,49 @@ void track_print_cyclers(track_t *track)
 
 void track_print_tree_last(track_t *track)
 {
-    track = track;
+    int min = (track->num_cyclers < 3? track->num_cyclers : 3);
+    cycler_info **infos = track_get_cyclers_in_order(track, true);
 
-    return;
+    printf("Últimos colocados (último ao terceiro último): ");
+    for(int i = 0; i < min; i++) 
+        printf("%d ", infos[i]->id);
+    printf("\n");
+
+    free(infos);
 }
 
 void track_print_final(track_t *track)
 {
-    track = track;
+    int orig_num_cyclers = track->orig_num_cyclers;
+    cycler_info **infos = track_get_cyclers_in_order(track, false);
 
-    return;
-}
+    printf("Colocações:\n");
+    for(int i = orig_num_cyclers - 1, j = 1, f = 0; i >=0; i--, j++) {
+        printf("%d colocado: %d", j, infos[i]->id);
 
-int track_find_last(track_t *track)
-{
-    int last = -1, last_pos = -1, last_lap = -1;
-    
-    for(int i = 0; i < track->orig_num_cyclers; ++i) {
-        cycler_info *info = &track->cycler_infos[i];
-        if(info->status != CYCLER_RUNNING)
-            continue;
+        if(infos[i]->status == CYCLER_CRASHED)
+            printf(" - QUEBRADO");
+        else {
+            f++;
 
-        if(last != -1) {
-            if(info->lap > last_lap || info->pos > last_pos
-               || (info->pos == last_pos && rand() % 2 == 0))
-            {
-                continue;
+            switch(f) {
+                case 1:
+                    printf(" - OURO");
+                    break;
+                case 2:
+                    printf(" - PRATA");
+                    break;
+                case 3:
+                    printf(" - BRONZE");
+                    break;
             }
         }
 
-        last = i;
-        last_pos = info->pos;
-        last_lap = info->lap;
+        printf("\n");
     }
 
-    return last;
+    free(infos);
 }
-
 
 void track_free(track_t *old_track)
 {
