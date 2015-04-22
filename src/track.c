@@ -3,7 +3,6 @@
 
 #include "track.h"
 #include "cycler.h"
-#include "globals.h"
 
 track_t *g_track = NULL;
 
@@ -32,7 +31,7 @@ track_t* track_new(int num_cyclers, int length, bool use_random_velocity)
         new_track->positions[i].cyclers[0] = i;
     }
     
-    // Fisher-Yates
+    // Fisher-Yates shuffle
     for(int i = num_cyclers - 1; i > 0; i--) {
         int tmp = new_track->positions[i].cyclers[0];
         int j = rand() % (num_cyclers - 1);
@@ -50,6 +49,7 @@ track_t* track_new(int num_cyclers, int length, bool use_random_velocity)
 
 void track_update_lap(track_t *track)
 {
+    // Atualiza volta mais alta da pista inteira baseada na volta dos ciclistas
     for(int i = 0; i < track->orig_num_cyclers; i++) {
         cycler_info *info = &track->cycler_infos[i];
         if(info->status == CYCLER_RUNNING) {
@@ -58,6 +58,8 @@ void track_update_lap(track_t *track)
         }
     }
 
+    // Marca que nenhum ciclista ainda fez seu movimento, e portanto nenhum
+    // espaço já esta totamente ocupado para essa iteração
     for(int i = 0; i < track->length; i++) {
         track->positions[i].occupied_ready = 0;
     }
@@ -69,6 +71,7 @@ static void track_eliminate_cycler(track_t *track, cycler_info *info,
     info->status = status;
     track->num_cyclers--;
 
+    // remove ciclista de seu espaço atual
     track_pos_t* track_pos = &(track->positions[info->pos]);
     for(int i = 0; i < MAX_CYCLERS_PER_POS; i++) {
         if(track_pos->cyclers[i] == info->id) {
@@ -81,6 +84,7 @@ static void track_eliminate_cycler(track_t *track, cycler_info *info,
 
 static int track_cyclers_compare_by_pos(const void *a, const void *b)
 {
+    // Compara ciclistas em ordem crescente de posição na pista (último para primeiro)
     cycler_info *info_a = *((cycler_info **)a),
                 *info_b = *((cycler_info **)b);
     if(info_a->lap < info_b->lap || (info_a->lap == info_b->lap && info_a->pos < info_b->pos))
@@ -91,8 +95,11 @@ static int track_cyclers_compare_by_pos(const void *a, const void *b)
     return 0;
 }
 
+// Aloca e retorna um vetor contento ponteiros para os ciclistas da pista,
+// em ordem de posição, opcionalmente incluindo somente aqueles que ainda
+// competem.
 cycler_info **track_get_cyclers_in_order(track_t *track, bool only_running)
-{   
+{
     int res_size = (only_running? track->num_cyclers : track->orig_num_cyclers);
     cycler_info **infos = calloc(res_size, sizeof(*infos));
     int infos_last = 0;
@@ -111,14 +118,15 @@ cycler_info **track_get_cyclers_in_order(track_t *track, bool only_running)
     return infos;
 }
 
+// Recria barreira com o número atual de ciclistas
 static void track_update_barrier(track_t *track)
 {
-    // Reseta barreira com o novo número de ciclistas para evitar deadlock
-    printf("reset barrier to %d\n", track->num_cyclers + 1);
     pthread_barrier_destroy(&cycler_instant_barrier);
     pthread_barrier_init(&cycler_instant_barrier, NULL, track->num_cyclers + 1);
 }
 
+// Processa eliminações e crashes de ciclistas antes de dar inicio a uma nova
+// volta
 int track_update_eliminations(track_t *track)
 {
     // Nenhuma eliminação ou crash a fazer
@@ -135,7 +143,10 @@ int track_update_eliminations(track_t *track)
     int orig_num = track->num_cyclers;
 
     if(track->waiting_for_elimination != 0) {
+        // Procura dentre os elimináveis aqueles que acabaram de terminar suas
+        // voltas
         int max_to_check = track->waiting_for_elimination;
+        
         for(int i = 0; i < max_to_check && i < track->num_cyclers; i++) {
             cycler_info *info = cyclers_in_order[i];
             if(info->pos == 0 && info->lap % 2 == 0) {
@@ -150,7 +161,7 @@ int track_update_eliminations(track_t *track)
 
     // Não podemos mais crashar ciclistas depois que um número mínimo sobrou
     if(track->num_cyclers <= MIN_CYCLERS_FOR_CRASHES) {
-        // Só sobrou o vencedor
+        // Só sobrou o vencedor, vamos 'eliminá-lo' para completar o programa
         if(eliminated && track->num_cyclers == 1) {
             cycler_info *info = cyclers_in_order[orig_num - 1];
             track_eliminate_cycler(track, info, CYCLER_FINISHED);
@@ -159,6 +170,8 @@ int track_update_eliminations(track_t *track)
 
         track->will_crash = 0;
     } else {
+        // Escolhe um ciclista aleatório para crashar
+        //
         // Repete as tentativas caso encontremos slots que correspondiam a
         // ciclistas já eliminados
         while(track->will_crash != 0) {
@@ -206,7 +219,7 @@ void track_print_cyclers(track_t *track)
     printf("\n");
 }
 
-void track_print_tree_last(track_t *track)
+void track_print_three_last(track_t *track)
 {
     int min = (track->num_cyclers < 3? track->num_cyclers : 3);
     cycler_info **infos = track_get_cyclers_in_order(track, true);
@@ -254,10 +267,6 @@ void track_print_final(track_t *track)
 
 void track_free(track_t *old_track)
 {
-    for(int i = 0; i < old_track->orig_num_cyclers; i++) {
-
-    }
-
     free(old_track->cycler_infos);
     free(old_track->positions);
     free(old_track);

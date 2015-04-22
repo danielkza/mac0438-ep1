@@ -5,20 +5,13 @@
 #include <pthread.h>
 
 #include "util.h"
-#include "globals.h"
 #include "cycler.h"
 #include "track.h"
-
-/* Variáveis globais */
-bool debug;
-bool use_random_velocity;
-pthread_barrier_t cycler_instant_barrier, join, printing;
-
-
 
 int main(int argc, char **argv)
 {
     /* Variáveis de leitura de argumentos */
+    bool debug = false;
     int dist = -1, num_cyclers = -1, use_random_velocity_i = -1;
     int debug_count = 0;
 
@@ -51,8 +44,6 @@ int main(int argc, char **argv)
     pthread_mutex_init(&cycler_instant_mutex, NULL);
     pthread_cond_init(&cycler_instant_cond, NULL);
     pthread_barrier_init(&cycler_instant_barrier, NULL, num_cyclers + 1);
-    sem_init(&status_sem, 0, 1);
-    sem_init(&track_sem, 0, 1);
 
     g_track = track_new(num_cyclers, dist, use_random_velocity_i == 1);
 
@@ -74,7 +65,7 @@ int main(int argc, char **argv)
 
         /* Imprime os três últimos a cada volta */
         if(prev_lap != g_track->lap)
-            track_print_tree_last(g_track);
+            track_print_three_last(g_track);
 
         /* Elimina o último colocado a cada duas voltas */
         if(g_track->lap != prev_lap && g_track->lap % 2 == 0) {
@@ -99,16 +90,17 @@ int main(int argc, char **argv)
             pthread_cond_broadcast(&cycler_instant_cond);
         }
 
-        if(eliminated)
+        /* if(eliminated)
             printf("eliminated: %d, num: %d\n", eliminated, g_track->num_cyclers);
+         */
 
         /* Espera que todas as threads tenham terminado a iteração */
-        printf("enter barrier main\n");
+        // printf("enter barrier main\n");
         pthread_barrier_wait(&cycler_instant_barrier);
 
         /* Sai do loop caso não haja mais ciclistas */
         if(g_track->num_cyclers == 0) {
-            printf("bailing main loop\n");
+            //printf("bailing main loop\n");
             break;
         }
 
@@ -125,8 +117,6 @@ int main(int argc, char **argv)
     track_print_final(g_track);
 
     /* Sincroniza todos os processos antes de limpar as variáveis */
-    sem_destroy(&status_sem);
-    sem_destroy(&track_sem);
     pthread_barrier_destroy(&cycler_instant_barrier);
     pthread_cond_destroy(&cycler_instant_cond);
     pthread_mutex_destroy(&cycler_instant_mutex);
